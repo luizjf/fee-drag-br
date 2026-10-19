@@ -1,0 +1,70 @@
+[project]
+name = "fee-drag-br"
+version = "0.0.0"
+description = "Measures, fund by fund and in BRL, how much investors in Brazilian investment funds lost versus the CDI after fees."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = "MIT"
+authors = [{ name = "Fee Drag BR maintainers" }]
+keywords = ["analytics-engineering", "cvm", "bcb", "cdi", "duckdb", "dbt"]
+classifiers = [
+  "Programming Language :: Python :: 3.12",
+  "Private :: Do Not Upload",
+]
+dependencies = [
+  "httpx>=0.28",
+  "polars>=2.0,<3",
+  "pyarrow>=26.0",
+  "duckdb>=1.5",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=9.0",
+  "ruff>=0.17",
+  "pre-commit>=4.7",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/fee_drag"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["src", "tests"]
+extend-exclude = ["dbt/target", "dbt/dbt_packages", "data"]
+
+[tool.ruff.lint]
+select = [
+  "A",    # flake8-builtins
+  "ANN",  # flake8-annotations: type hints everywhere
+  "ARG",  # unused arguments
+  "B",    # flake8-bugbear
+  "C4",   # comprehensions
+  "DTZ",  # timezone-aware datetimes
+  "E",    # pycodestyle errors
+  "F",    # pyflakes
+  "I",    # isort
+  "N",    # pep8-naming
+  "PTH",  # prefer pathlib over os.path
+  "RUF",  # ruff-specific
+  "SIM",  # flake8-simplify
+  "T20",  # no print(): use structured logging
+  "UP",   # pyupgrade
+  "W",    # pycodestyle warnings
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["ANN", "ARG"]
+"__init__.py" = ["F401"]
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --strict-config"
