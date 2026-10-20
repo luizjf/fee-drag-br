@@ -78,7 +78,7 @@ Every decision an interviewer could reasonably challenge has an ADR in
 | --- | --- |
 | [001](docs/adr/0001-duckdb-and-parquet-no-paid-cloud.md) | DuckDB + Parquet, no paid cloud |
 | [002](docs/adr/0002-daily-grain-class-subclass-date.md) | Daily grain = fund class CNPJ + subclass + date |
-| [003](docs/adr/0003-incremental-models-with-three-month-lookback.md) | Incremental models with a 3-month lookback |
+| [003](docs/adr/0003-incremental-models-driven-by-change-detection.md) | Incremental models driven by per-month change detection |
 | [004](docs/adr/0004-brl-gap-vs-cdi-as-main-metric.md) | Main metric = BRL gap vs. CDI on previous-day net assets |
 | [005](docs/adr/0005-keep-cancelled-funds-in-history.md) | Cancelled funds stay in history |
 | [006](docs/adr/0006-english-in-code-bilingual-readme.md) | English in code and technical docs, bilingual README |

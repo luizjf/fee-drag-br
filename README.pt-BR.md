@@ -80,7 +80,7 @@ Toda decisão que um entrevistador pode questionar tem um ADR em
 | --- | --- |
 | [001](docs/adr/0001-duckdb-and-parquet-no-paid-cloud.md) | DuckDB + Parquet, sem nuvem paga |
 | [002](docs/adr/0002-daily-grain-class-subclass-date.md) | Grão diário = CNPJ da classe + subclasse + data |
-| [003](docs/adr/0003-incremental-models-with-three-month-lookback.md) | Modelos incrementais com lookback de 3 meses |
+| [003](docs/adr/0003-incremental-models-driven-by-change-detection.md) | Modelos incrementais guiados por deteccao de mudanca por mes |
 | [004](docs/adr/0004-brl-gap-vs-cdi-as-main-metric.md) | Métrica principal = diferença em reais contra o CDI sobre o PL do dia anterior |
 | [005](docs/adr/0005-keep-cancelled-funds-in-history.md) | Fundos cancelados permanecem no histórico |
 | [006](docs/adr/0006-english-in-code-bilingual-readme.md) | Inglês no código e na documentação técnica, README bilíngue |
