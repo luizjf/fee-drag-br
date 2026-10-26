@@ -20,5 +20,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bilingual `README.md` / `README.pt-BR.md`, `LICENSE` (MIT) and this changelog.
 - ADR template plus ADR-001 to ADR-006 in `docs/adr/`.
 - Documentation stubs in `docs/` and a smoke test covering package import.
+- `docs/data_sources.md`: per-file column tables, fill rates, keys and traps for every
+  CVM and BCB source, measured with DuckDB during the discovery spike.
+- `src/fee_drag/config.py`: `Settings` built from environment variables only, with a
+  dependency-free `.env` reader and validation that rejects unusable values.
+- `src/fee_drag/log.py`: structured logging, one JSON object per line.
+- `src/fee_drag/http_client.py`: explicit timeout plus bounded exponential backoff with
+  full jitter; retries transport errors, timeouts, 429 and 5xx, never a 404 or 403.
+- `src/fee_drag/manifest.py`: `data/bronze/_manifest.parquet`, one row per
+  `(source, period)`, holding the SHA-256 of the extracted payload. This is the state
+  that makes ingestion idempotent.
+- `src/fee_drag/ingest/cvm_daily_reports.py`: monthly ingestion of the CVM daily reports
+  into `data/bronze/cvm_daily_reports/year_month=YYYYMM/`, with the source column names
+  preserved, `VL_QUOTA` declared as `DECIMAL(27,12)`, and `_ingested_at`, `_source_file`,
+  `_file_hash` and `_layout` added. A republished month replaces its whole partition.
+- `tzdata` runtime dependency: Windows and slim containers ship no IANA time zone
+  database, which pyarrow needs to read the UTC timestamps in the manifest.
+- Tests: 51 unit tests over config, retry policy, manifest and both daily-report
+  layouts, driven by `httpx.MockTransport` and two sub-kilobyte zip fixtures. No test
+  touches the network.
 
-[Unreleased]: https://github.com/fee-drag-br/fee-drag-br/compare/main...HEAD
+### Changed
+
+- ADR-003 rewritten as `0003-incremental-models-driven-by-change-detection.md`: the
+  trailing three-month lookback is replaced by per-month change detection, because CVM
+  publishes each month about eleven months late and also rewrites ranges in bulk.
+
+[Unreleased]: https://github.com/luizjf/fee-drag-br/compare/main...HEAD

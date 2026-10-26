@@ -16,6 +16,9 @@ dependencies = [
   "polars>=2.0,<3",
   "pyarrow>=26.0",
   "duckdb>=1.5",
+  # Windows and slim containers ship no IANA time zone database, which pyarrow needs to
+  # materialise the UTC-stamped timestamps in data/bronze/_manifest.parquet.
+  "tzdata>=2026.1",
 ]
 
 [dependency-groups]
