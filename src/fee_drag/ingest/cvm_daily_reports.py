@@ -21,9 +21,7 @@ section 9).
 
 from __future__ import annotations
 
-import hashlib
 import io
-import shutil
 import tempfile
 import zipfile
 from dataclasses import dataclass
@@ -31,10 +29,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import duckdb
 import httpx
 
-from fee_drag import manifest
+from fee_drag import bronze, manifest
 from fee_drag.http_client import build_client, request_with_retry
 from fee_drag.log import get_logger
 
@@ -112,7 +109,7 @@ def file_url(settings: Settings, period: str) -> str:
 
 
 def partition_dir(settings: Settings, period: str) -> Path:
-    return settings.bronze_dir / SOURCE / f"year_month={period}"
+    return bronze.partition_dir(settings.bronze_dir, SOURCE, period)
 
 
 def extract_single_csv(payload: bytes) -> tuple[str, bytes]:
@@ -137,65 +134,6 @@ def detect_layout(csv_bytes: bytes) -> tuple[str, dict[str, str]]:
     if header == list(LEGACY_COLUMNS):
         return LAYOUT_LEGACY, LEGACY_COLUMNS
     raise LayoutError(f"unknown daily report header: {header}")
-
-
-def _sql_literal(value: str) -> str:
-    return "'" + value.replace("'", "''") + "'"
-
-
-def _columns_clause(columns: dict[str, str]) -> str:
-    pairs = ", ".join(
-        f"{_sql_literal(name)}: {_sql_literal(sql_type)}" for name, sql_type in columns.items()
-    )
-    return "{" + pairs + "}"
-
-
-def write_partition(
-    csv_path: Path,
-    destination: Path,
-    *,
-    columns: dict[str, str],
-    layout: str,
-    source_file: str,
-    file_hash: str,
-    ingested_at: datetime,
-) -> int:
-    """Convert one extracted CSV into one Parquet partition, replacing it wholesale.
-
-    The partition is built in a sibling temp directory and swapped in at the end, so an
-    interrupted run never leaves a half-written period behind for dbt to read.
-    """
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    staging_dir = destination.parent / f"_tmp_{destination.name}"
-    if staging_dir.exists():
-        shutil.rmtree(staging_dir)
-    staging_dir.mkdir(parents=True)
-    out_file = staging_dir / "part-0.parquet"
-
-    select = (
-        "SELECT *, "
-        f'{_sql_literal(ingested_at.isoformat())}::TIMESTAMP WITH TIME ZONE AS "_ingested_at", '
-        f'{_sql_literal(source_file)} AS "_source_file", '
-        f'{_sql_literal(file_hash)} AS "_file_hash", '
-        f'{_sql_literal(layout)} AS "_layout" '
-        f"FROM read_csv({_sql_literal(csv_path.as_posix())}, "
-        f"delim=';', header=true, encoding='latin-1', "
-        f"columns={_columns_clause(columns)})"
-    )
-
-    with duckdb.connect() as con:
-        con.execute(
-            f"COPY ({select}) TO {_sql_literal(out_file.as_posix())} "
-            "(FORMAT PARQUET, COMPRESSION ZSTD)"
-        )
-        rows = con.execute(
-            f"SELECT count(*) FROM read_parquet({_sql_literal(out_file.as_posix())})"
-        ).fetchone()[0]
-
-    if destination.exists():
-        shutil.rmtree(destination)
-    staging_dir.replace(destination)
-    return int(rows)
 
 
 def ingest_month(
@@ -227,7 +165,7 @@ def ingest_month(
 
     response = request_with_retry(client, "GET", url, settings=settings)
     csv_name, csv_bytes = extract_single_csv(response.content)
-    file_hash = hashlib.sha256(csv_bytes).hexdigest()
+    file_hash = bronze.sha256_hex(csv_bytes)
 
     if not force and recorded is not None and recorded.file_hash == file_hash:
         manifest.upsert(
@@ -255,14 +193,15 @@ def ingest_month(
         csv_path = Path(tmp) / csv_name
         csv_path.parent.mkdir(parents=True, exist_ok=True)
         csv_path.write_bytes(csv_bytes)
-        rows = write_partition(
+        rows = bronze.write_csv_partition(
             csv_path,
             partition_dir(settings, period),
-            columns=columns,
-            layout=layout,
             source_file=csv_name,
             file_hash=file_hash,
             ingested_at=ingested_at,
+            encoding="latin-1",
+            columns=columns,
+            extra_columns={"_layout": layout},
         )
 
     manifest.upsert(

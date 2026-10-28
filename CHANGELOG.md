@@ -39,11 +39,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tests: 51 unit tests over config, retry policy, manifest and both daily-report
   layouts, driven by `httpx.MockTransport` and two sub-kilobyte zip fixtures. No test
   touches the network.
+- `src/fee_drag/bronze.py`: the shared bronze writer. Declared types or `VARCHAR`,
+  never sniffed; `quote=''` because no CVM file is quoted; three metadata columns in a
+  fixed order; and the partition built in a `_tmp_` sibling and swapped in, with the old
+  partition left intact if the write fails.
+- `src/fee_drag/ingest/cvm_registry.py`: `registro_fundo_classe.zip` and `cad_fi.csv`
+  into four bronze sources (`cvm_registry_funds`, `_classes`, `_subclasses`, `_legacy`).
+  The period is the month of the server's `Last-Modified`, so bronze keeps the last
+  snapshot of every month. Every column is `VARCHAR` so digit-only CNPJs keep their
+  leading zeros, latin-1 is transcoded in Python, and each CSV is hashed on its own.
+  Header drift is logged rather than fatal.
+- `src/fee_drag/ingest/bcb_sgs.py`: CDI (SGS series 12) in windows of at most three
+  years, merged and de-duplicated by date, one partition per month. Conflicting values
+  for the same date are logged. Each month's canonical CSV is both the hashed payload and
+  the written one.
+- Fixtures built from real data: a 2 KB registry zip (including a fund with two
+  managers), a `cad_fi.csv` sample carrying the three C1-range rows that make DuckDB
+  reject the real file, and 35 real CDI observations straddling a window boundary.
+- 55 new tests (106 in total), none touching the network.
 
 ### Changed
 
 - ADR-003 rewritten as `0003-incremental-models-driven-by-change-detection.md`: the
   trailing three-month lookback is replaced by per-month change detection, because CVM
   publishes each month about eleven months late and also rewrites ranges in bulk.
+- `cvm_daily_reports.py` now writes through `bronze.py`; behaviour and output are
+  unchanged, and its 51 existing tests pass untouched.
 
 [Unreleased]: https://github.com/luizjf/fee-drag-br/compare/main...HEAD
